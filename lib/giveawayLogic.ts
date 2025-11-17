@@ -41,7 +41,14 @@ export function processEntries(
       
       // Don't create entries yet - we'll do it after processing all comments
     } else {
-      // When tags are not required, each comment is one entry
+      // When tags are not required, skip comments that are ONLY tags (likely self-replies for tagging)
+      // Only count comments with substantive text beyond just tags
+      const commentWithoutTags = comment.text.replace(/@\w+/g, '').trim();
+      if (commentWithoutTags.length === 0) {
+        return; // Skip tag-only comments
+      }
+      
+      // Each comment with substantive text is one entry
       entries.push({
         username,
         comment: comment.text,

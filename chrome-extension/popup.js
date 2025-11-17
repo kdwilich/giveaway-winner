@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       } catch (err) {
         // Content script may already be loaded, ignore error
-        console.log('Content script injection:', err.message);
+        console.error('Content script injection:', err.message);
       }
       
       // Wait a bit for content script to initialize
@@ -49,9 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Filter post owner if checkbox is checked
           if (excludePoster && response.postOwner) {
-            const beforeCount = comments.length;
             comments = comments.filter(c => c.username !== response.postOwner);
-            console.log(`Filtered out ${beforeCount - comments.length} comments from post owner: ${response.postOwner}`);
           }
           
           if (comments.length === 0) {
@@ -125,11 +123,9 @@ document.addEventListener('DOMContentLoaded', () => {
       url: url,
       filename: filename,
       saveAs: true
-    }, (downloadId) => {
+    }, () => {
       if (chrome.runtime.lastError) {
         console.error('Download error:', chrome.runtime.lastError);
-      } else {
-        console.log('Download started with ID:', downloadId);
       }
     });
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { GiveawayCriteria, InstagramComment, Winner } from '@/types/giveaway';
 import { processEntries, selectWinners } from '@/lib/giveawayLogic';
@@ -8,7 +8,7 @@ import styles from './GiveawayForm.module.scss';
 import WinnerDisplay from '../WinnerDisplay/WinnerDisplay';
 
 const THEME_GRADIENTS = [
-  { name: 'Purple', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  { name: 'Purple', gradient: 'linear-gradient(135deg, #a88bfb 0%, #8b6fd9 100%)' },
   { name: 'Blue', gradient: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)' },
   { name: 'Green', gradient: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)' },
   { name: 'Orange', gradient: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)' },
@@ -22,6 +22,7 @@ export default function GiveawayForm() {
   const { data: session, status } = useSession();
   const [inputMode, setInputMode] = useState<'url' | 'csv'>('url');
   const [showSettings, setShowSettings] = useState(false);
+  const winnerDisplayRef = useRef<HTMLDivElement>(null);
   const [selectedTheme, setSelectedTheme] = useState(0);
   const [customHex, setCustomHex] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -35,23 +36,119 @@ export default function GiveawayForm() {
   });
   
   const [manualEntriesText, setManualEntriesText] = useState('');
+  const [showManualEntries, setShowManualEntries] = useState(false);
+  const [showMaxEntries, setShowMaxEntries] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvComments, setCsvComments] = useState<InstagramComment[]>([]);
+  const [winnersInput, setWinnersInput] = useState('1');
+  const [maxEntriesInput, setMaxEntriesInput] = useState('1');
   const [loading, setLoading] = useState(false);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [error, setError] = useState('');
   const [totalEntries, setTotalEntries] = useState(0);
   const [uniqueUsers, setUniqueUsers] = useState(0);
 
+  // Scroll to winners when they're populated
+  useEffect(() => {
+    if (winners.length > 0 && winnerDisplayRef.current) {
+      winnerDisplayRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [winners]);
+
+  // Clear winners when input mode changes
+  useEffect(() => {
+    setWinners([]);
+    setError('');
+  }, [inputMode]);
+
+  // Load saved theme from localStorage on mount
+  useEffect(() => {
+    const savedThemeIndex = localStorage.getItem('selectedTheme');
+    const savedCustomHex = localStorage.getItem('customHex');
+    const savedShowCustomInput = localStorage.getItem('showCustomInput');
+
+    if (savedShowCustomInput === 'true' && savedCustomHex) {
+      setShowCustomInput(true);
+      setCustomHex(savedCustomHex);
+      const normalizedHex = savedCustomHex.startsWith('#') ? savedCustomHex : `#${savedCustomHex}`;
+      if (/^#[0-9A-Fa-f]{6}$/.test(normalizedHex)) {
+        const customGradient = `linear-gradient(135deg, ${normalizedHex} 0%, ${normalizedHex} 100%)`;
+        updateAppTheme(customGradient);
+      }
+    } else if (savedThemeIndex !== null) {
+      const index = parseInt(savedThemeIndex);
+      if (index >= 0 && index < THEME_GRADIENTS.length) {
+        setSelectedTheme(index);
+        updateAppTheme(THEME_GRADIENTS[index].gradient);
+      }
+    }
+  }, []);
+
   // Extract primary color from gradient for app theming
   const extractPrimaryColor = (gradient: string): string => {
     const match = gradient.match(/#[0-9A-Fa-f]{6}/);
-    return match ? match[0] : '#8b5cf6';
+    return match ? match[0] : '#a88bfb';
+  };
+
+  // Convert hex to OKLCH and generate accent color
+  const hexToOKLCH = (hex: string) => {
+    // Convert hex to RGB
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    
+    // Simple conversion to approximate OKLCH-like values
+    // L (lightness) 0-1, C (chroma) 0-0.4, H (hue) 0-360
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    
+    let h = 0;
+    const d = max - min;
+    
+    if (d !== 0) {
+      if (max === r) {
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+      } else if (max === g) {
+        h = ((b - r) / d + 2) / 6;
+      } else {
+        h = ((r - g) / d + 4) / 6;
+      }
+    }
+    
+    const c = d / (1 - Math.abs(2 * l - 1) || 1);
+    
+    return { l, c, h: h * 360 };
+  };
+
+  const generateAccentColor = (primaryHex: string): string => {
+    const { l, c, h } = hexToOKLCH(primaryHex);
+    
+    // Shift hue by 60-90 degrees for complementary accent
+    const accentHue = (h + 75) % 360;
+    
+    // Convert back to RGB (approximate)
+    const hueToRgb = (h: number) => {
+      const k = (n: number) => (n + h / 30) % 12;
+      const a = c * Math.min(l, 1 - l);
+      const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      
+      return [
+        Math.round(f(0) * 255),
+        Math.round(f(8) * 255),
+        Math.round(f(4) * 255)
+      ];
+    };
+    
+    const [ar, ag, ab] = hueToRgb(accentHue);
+    return `#${ar.toString(16).padStart(2, '0')}${ag.toString(16).padStart(2, '0')}${ab.toString(16).padStart(2, '0')}`;
   };
 
   // Update CSS variables when theme changes
   const updateAppTheme = (gradient: string) => {
     const primaryColor = extractPrimaryColor(gradient);
+    const accentColor = generateAccentColor(primaryColor);
+    
     document.documentElement.style.setProperty('--color-primary', primaryColor);
     
     // Adjust hover color (slightly darker)
@@ -63,6 +160,35 @@ export default function GiveawayForm() {
     
     // Add alpha version for shadows
     document.documentElement.style.setProperty('--color-primary-alpha', `${primaryColor}40`);
+    
+    // Update gradient orbs with dynamic colors
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const opacity = isDarkMode ? '0.25' : '0.15';
+    
+    // Extract secondary color from gradient if available
+    const secondaryMatch = gradient.match(/#[0-9A-Fa-f]{6}/g);
+    const secondaryColor = secondaryMatch && secondaryMatch[1] ? secondaryMatch[1] : primaryColor;
+    
+    // Convert hex to rgba
+    const hexToRgba = (hex: string, alpha: string) => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+    
+    document.documentElement.style.setProperty(
+      '--gradient-orb-1',
+      `radial-gradient(circle at 20% 50%, ${hexToRgba(primaryColor, opacity)} 0%, transparent 50%)`
+    );
+    document.documentElement.style.setProperty(
+      '--gradient-orb-2',
+      `radial-gradient(circle at 80% 20%, ${hexToRgba(accentColor, opacity)} 0%, transparent 50%)`
+    );
+    document.documentElement.style.setProperty(
+      '--gradient-orb-3',
+      `radial-gradient(circle at 40% 90%, ${hexToRgba(secondaryColor, opacity)} 0%, transparent 50%)`
+    );
   };
 
   // Handle theme selection
@@ -70,24 +196,42 @@ export default function GiveawayForm() {
     setSelectedTheme(index);
     setShowCustomInput(false);
     updateAppTheme(THEME_GRADIENTS[index].gradient);
+    
+    // Save to localStorage
+    localStorage.setItem('selectedTheme', index.toString());
+    localStorage.setItem('showCustomInput', 'false');
+    localStorage.removeItem('customHex');
   };
 
   // Handle custom hex input
   const handleCustomHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCustomHex(value);
+    let value = e.target.value;
     
-    // Validate hex color
-    if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
-      const customGradient = `linear-gradient(135deg, ${value} 0%, ${value} 100%)`;
+    // Remove # if present and add it back for consistency
+    value = value.replace(/^#/, '');
+    
+    // Add # prefix for display
+    const displayValue = value ? `#${value}` : '';
+    setCustomHex(displayValue);
+    
+    // Validate hex color (with or without #)
+    if (/^#?[0-9A-Fa-f]{6}$/.test(value) || /^#[0-9A-Fa-f]{6}$/.test(displayValue)) {
+      const hexColor = value.startsWith('#') ? value : `#${value}`;
+      const customGradient = `linear-gradient(135deg, ${hexColor} 0%, ${hexColor} 100%)`;
       updateAppTheme(customGradient);
+      
+      // Save to localStorage
+      localStorage.setItem('customHex', displayValue);
+      localStorage.setItem('showCustomInput', 'true');
     }
   };
 
   // Get current gradient for share view
   const getCurrentGradient = () => {
-    if (showCustomInput && /^#[0-9A-Fa-f]{6}$/.test(customHex)) {
-      return `linear-gradient(135deg, ${customHex} 0%, ${customHex} 100%)`;
+    // Normalize the hex value
+    const normalizedHex = customHex.startsWith('#') ? customHex : `#${customHex}`;
+    if (showCustomInput && /^#[0-9A-Fa-f]{6}$/.test(normalizedHex)) {
+      return `linear-gradient(135deg, ${normalizedHex} 0%, ${normalizedHex} 100%)`;
     }
     return THEME_GRADIENTS[selectedTheme].gradient;
   };
@@ -158,7 +302,7 @@ export default function GiveawayForm() {
       }
       
       setCsvComments(comments);
-      setError(`✓ Loaded ${comments.length} comments from CSV`);
+      setError(`success:✓ Loaded ${comments.length} comments from CSV`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse CSV');
       setCsvFile(null);
@@ -267,7 +411,7 @@ export default function GiveawayForm() {
           <div className={styles['giveaway-form__auth']}>
             <h1>Instagram Giveaway Picker</h1>
             <p>Connect your Instagram account to fetch comments, or switch to CSV upload</p>
-            <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-lg)' }}>
+            <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-lg)', justifyContent: 'center' }}>
               <button
                 onClick={() => signIn('instagram')}
                 className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--primary']}`}
@@ -315,7 +459,14 @@ export default function GiveawayForm() {
                   <button
                     type="button"
                     className={`${styles['giveaway-form__theme-option']} ${styles['giveaway-form__theme-option--custom']} ${showCustomInput ? styles['giveaway-form__theme-option--active'] : ''}`}
-                    onClick={() => setShowCustomInput(!showCustomInput)}
+                    onClick={() => {
+                      const newValue = !showCustomInput;
+                      setShowCustomInput(newValue);
+                      localStorage.setItem('showCustomInput', newValue.toString());
+                      if (!newValue) {
+                        localStorage.removeItem('customHex');
+                      }
+                    }}
                     title="Custom Color"
                   >
                     +
@@ -384,11 +535,14 @@ export default function GiveawayForm() {
                 type="text"
                 id="postUrl"
                 placeholder="https://www.instagram.com/p/..."
-                value={criteria.postUrl}
+                value={criteria.postUrl || ''}
                 onChange={(e) => setCriteria({ ...criteria, postUrl: e.target.value })}
               />
               <div className={styles['giveaway-form__help-text']}>
                 Paste the Instagram post URL to fetch comments
+              </div>
+              <div className={styles['giveaway-form__help-text']} style={{ color: 'var(--color-warning)', marginTop: 'var(--spacing-xs)' }}>
+                ⚠️ Note: Instagram's API limitations may prevent retrieval of all comments. For best accuracy, use the Chrome extension to export comments to CSV.
               </div>
             </div>
           ) : (
@@ -408,16 +562,34 @@ export default function GiveawayForm() {
           )}
 
           <div className={styles['giveaway-form__field']}>
-            <label htmlFor="manualEntries">Manual Entries (one username per line)</label>
-            <textarea
-              id="manualEntries"
-              placeholder="username1&#10;username2&#10;username3"
-              value={manualEntriesText}
-              onChange={(e) => setManualEntriesText(e.target.value)}
-            />
-            <div className={styles['giveaway-form__help-text']}>
-              Add bonus entries or entries from other sources
+            <div className={styles['giveaway-form__checkbox']}>
+              <input
+                type="checkbox"
+                id="showManualEntries"
+                checked={showManualEntries}
+                onChange={(e) => {
+                  setShowManualEntries(e.target.checked);
+                  if (!e.target.checked) {
+                    setManualEntriesText('');
+                  }
+                }}
+              />
+              <label htmlFor="showManualEntries">Add manual entries</label>
             </div>
+            {showManualEntries && (
+              <>
+                <label htmlFor="manualEntries" style={{ marginTop: 'var(--spacing-md)' }}>Manual Entries (one username per line)</label>
+                <textarea
+                  id="manualEntries"
+                  placeholder="username1&#10;username2&#10;username3"
+                  value={manualEntriesText}
+                  onChange={(e) => setManualEntriesText(e.target.value)}
+                />
+                <div className={styles['giveaway-form__help-text']}>
+                  Add bonus entries or entries from other sources
+                </div>
+              </>
+            )}
           </div>
 
           <div className={styles['giveaway-form__field']}>
@@ -426,53 +598,116 @@ export default function GiveawayForm() {
               type="number"
               id="numberOfWinners"
               min="1"
-              value={criteria.numberOfWinners}
-              onChange={(e) => setCriteria({ ...criteria, numberOfWinners: parseInt(e.target.value) || 1 })}
+              value={winnersInput}
+              onChange={(e) => {
+                const val = e.target.value;
+                setWinnersInput(val);
+                if (val !== '' && parseInt(val) >= 1) {
+                  setCriteria({ ...criteria, numberOfWinners: parseInt(val) });
+                }
+              }}
+              onBlur={() => {
+                if (winnersInput === '' || parseInt(winnersInput) < 1) {
+                  setWinnersInput('1');
+                  setCriteria({ ...criteria, numberOfWinners: 1 });
+                }
+              }}
             />
           </div>
 
           <div className={styles['giveaway-form__checkbox-group']}>
-            <div className={styles['giveaway-form__checkbox']}>
-              <input
-                type="checkbox"
-                id="uniqueEntries"
-                checked={criteria.uniqueEntriesOnly}
-                onChange={(e) => setCriteria({
-                  ...criteria,
-                  uniqueEntriesOnly: e.target.checked,
-                  maxEntriesPerUser: e.target.checked ? 1 : criteria.maxEntriesPerUser,
-                })}
-              />
-              <label htmlFor="uniqueEntries">Unique entries only (one entry per user)</label>
+            <div className={styles['giveaway-form__field']}>
+              <label>Entry Counting Method</label>
+              <div className={styles['giveaway-form__help-text']} style={{ marginBottom: 'var(--spacing-md)' }}>
+                Choose how entries are counted for each participant
+              </div>
             </div>
 
-            {!criteria.uniqueEntriesOnly && (
-              <div className={styles['giveaway-form__field']}>
-                <label htmlFor="maxEntries">Max entries per user (0 = unlimited)</label>
+            <div className={styles['giveaway-form__radio-group']}>
+              <div className={styles['giveaway-form__radio']}>
                 <input
-                  type="number"
-                  id="maxEntries"
-                  min="0"
-                  value={criteria.maxEntriesPerUser}
-                  onChange={(e) => setCriteria({ ...criteria, maxEntriesPerUser: parseInt(e.target.value) || 0 })}
+                  type="radio"
+                  id="countByTags"
+                  name="entryCountingMethod"
+                  checked={criteria.requireTag}
+                  onChange={() => setCriteria({ ...criteria, requireTag: true, uniqueEntriesOnly: false })}
                 />
+                <label htmlFor="countByTags">Count by tags: Each @mention = 1 entry (e.g., tagging 3 friends = 3 entries)</label>
               </div>
-            )}
+              <div className={styles['giveaway-form__radio']}>
+                <input
+                  type="radio"
+                  id="countByComments"
+                  name="entryCountingMethod"
+                  checked={!criteria.requireTag}
+                  onChange={() => setCriteria({ ...criteria, requireTag: false })}
+                />
+                <label htmlFor="countByComments">Count by comments: Each comment = 1 entry</label>
+              </div>
+            </div>
 
-            <div className={styles['giveaway-form__checkbox']}>
-              <input
-                type="checkbox"
-                id="requireTag"
-                checked={criteria.requireTag}
-                onChange={(e) => setCriteria({ ...criteria, requireTag: e.target.checked })}
-              />
-              <label htmlFor="requireTag">Require user to tag someone (@mention)</label>
+            <div style={{ marginTop: 'var(--spacing-lg)', marginBottom: 'var(--spacing-sm)', fontWeight: 500 }}>
+              Entry Limits Per User
+            </div>
+
+            <div className={styles['giveaway-form__field']}>
+              <div className={styles['giveaway-form__checkbox']}>
+                <input
+                  type="checkbox"
+                  id="showMaxEntries"
+                  checked={showMaxEntries}
+                  onChange={(e) => {
+                    setShowMaxEntries(e.target.checked);
+                    if (!e.target.checked) {
+                      setMaxEntriesInput('1');
+                      setCriteria({ ...criteria, maxEntriesPerUser: 0, uniqueEntriesOnly: false });
+                    } else {
+                      setCriteria({ ...criteria, maxEntriesPerUser: 1, uniqueEntriesOnly: true });
+                    }
+                  }}
+                />
+                <label htmlFor="showMaxEntries">Limit entries per user</label>
+              </div>
+              {showMaxEntries && (
+                <>
+                  <label htmlFor="maxEntries" style={{ marginTop: 'var(--spacing-md)' }}>Max entries per user</label>
+                  <input
+                    type="number"
+                    id="maxEntries"
+                    min="1"
+                    value={maxEntriesInput}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setMaxEntriesInput(val);
+                      if (val !== '' && parseInt(val) >= 1) {
+                        setCriteria({ 
+                          ...criteria, 
+                          maxEntriesPerUser: parseInt(val),
+                          uniqueEntriesOnly: parseInt(val) === 1
+                        });
+                      }
+                    }}
+                    onBlur={() => {
+                      if (maxEntriesInput === '' || parseInt(maxEntriesInput) < 1) {
+                        setMaxEntriesInput('1');
+                        setCriteria({ ...criteria, maxEntriesPerUser: 1, uniqueEntriesOnly: true });
+                      }
+                    }}
+                  />
+                  <div className={styles['giveaway-form__help-text']}>
+                    Set maximum number of entries each user can have
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
           {error && (
-            <div style={{ color: 'var(--color-error)', marginBottom: 'var(--spacing-lg)' }}>
-              {error}
+            <div style={{ 
+              color: error.startsWith('success:') ? 'var(--color-success)' : 'var(--color-error)', 
+              marginBottom: 'var(--spacing-lg)' 
+            }}>
+              {error.replace('success:', '')}
             </div>
           )}
 
@@ -489,12 +724,14 @@ export default function GiveawayForm() {
       </div>
 
       {winners.length > 0 && (
-        <WinnerDisplay 
-          winners={winners} 
-          totalEntries={totalEntries} 
-          uniqueUsers={uniqueUsers}
-          shareGradient={getCurrentGradient()}
-        />
+        <div ref={winnerDisplayRef}>
+          <WinnerDisplay 
+            winners={winners} 
+            totalEntries={totalEntries} 
+            uniqueUsers={uniqueUsers}
+            shareGradient={getCurrentGradient()}
+          />
+        </div>
       )}
     </div>
   );

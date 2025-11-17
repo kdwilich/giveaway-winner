@@ -8,15 +8,15 @@
   --color-border: rgba(0, 0, 0, 0.1);
   --color-text-primary: #1a1a1a;
   --color-text-secondary: #666666;
-  --color-primary: #8b5cf6;
-  --color-primary-hover: #7c3aed;
-  --color-primary-alpha: rgba(139, 92, 246, 0.25);
+  --color-primary: #a88bfb;
+  --color-primary-hover: #9575f0;
+  --color-primary-alpha: rgba(168, 139, 251, 0.25);
   --color-success: #22c55e;
   --color-error: #ef4444;
   --color-warning: #f59e0b;
   
   // Gradient orbs for background
-  --gradient-orb-1: radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+  --gradient-orb-1: radial-gradient(circle at 20% 50%, rgba(168, 139, 251, 0.15) 0%, transparent 50%);
   --gradient-orb-2: radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.15) 0%, transparent 50%);
   --gradient-orb-3: radial-gradient(circle at 40% 90%, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
   
@@ -52,15 +52,15 @@
     --color-border: rgba(255, 255, 255, 0.1);
     --color-text-primary: #fafafa;
     --color-text-secondary: #a0a0a0;
-    --color-primary: #a78bfa;
-    --color-primary-hover: #8b5cf6;
-    --color-primary-alpha: rgba(167, 139, 250, 0.25);
+    --color-primary: #b9a3fc;
+    --color-primary-hover: #a88bfb;
+    --color-primary-alpha: rgba(185, 163, 252, 0.25);
     --color-success: #34d399;
     --color-error: #f87171;
     --color-warning: #fbbf24;
     
     // Darker gradient orbs for dark mode
-    --gradient-orb-1: radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.25) 0%, transparent 50%);
+    --gradient-orb-1: radial-gradient(circle at 20% 50%, rgba(168, 139, 251, 0.25) 0%, transparent 50%);
     --gradient-orb-2: radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.25) 0%, transparent 50%);
     --gradient-orb-3: radial-gradient(circle at 40% 90%, rgba(59, 130, 246, 0.25) 0%, transparent 50%);
   }

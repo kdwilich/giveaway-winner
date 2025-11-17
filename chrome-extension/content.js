@@ -1,14 +1,10 @@
-// Content script - runs on Instagram post pages
-console.log('Instagram Giveaway Scraper: Content script loaded');
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'scrapeComments') {
-    console.log('Starting comment scrape...');
     
     try {
       const result = scrapeAllComments();
-      console.log(`Scraped ${result.comments.length} comments`);
       sendResponse({ 
         success: true, 
         comments: result.comments,
@@ -25,14 +21,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 function scrapeAllComments() {
   const comments = [];
   
-  console.log('=== Starting comment scrape ===');
-  
   // Strategy: Comments section is typically in an <article> or after the post
   // Find all time elements (each comment has a timestamp)
   // Then work backwards to find the associated comment data
   
   const timeElements = document.querySelectorAll('time[datetime]');
-  console.log(`Found ${timeElements.length} time elements (comments + post + caption)`);
   
   timeElements.forEach((timeEl, index) => {
     try {
@@ -79,18 +72,9 @@ function scrapeAllComments() {
     }
   });
   
-  console.log(`Successfully parsed ${uniqueComments.length} unique comments (${comments.length - uniqueComments.length} duplicates removed)`);
-  
   // Identify post owner from the first comment (should be the caption)
   const postOwnerUsername = uniqueComments.length > 0 ? uniqueComments[0].username : null;
-  if (postOwnerUsername) {
-    console.log(`Post owner (first comment): ${postOwnerUsername}`);
-  }
-  
-  if (uniqueComments.length > 0) {
-    console.log('First 3 comments:', uniqueComments.slice(0, 3));
-  }
-  
+
   return {
     comments: uniqueComments,
     postOwner: postOwnerUsername

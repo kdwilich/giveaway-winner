@@ -120,7 +120,7 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
           <div className={styles['share-view__content']} onClick={(e) => e.stopPropagation()}>
             <div className={styles['share-view__card']} style={{ background: shareGradient }}>
               <div className={styles['share-view__header']}>
-                <h1>🎉 Giveaway Winners 🎉</h1>
+                <h1>🎉 Giveaway {winners.length === 1 ? 'Winner' : 'Winners'} 🎉</h1>
               </div>
               
               <div className={styles['share-view__stats']}>
