@@ -257,93 +257,100 @@ export default function GiveawayForm() {
     );
   }
 
-  if (!session) {
-    return (
-      <div className={styles['giveaway-form__container']}>
-        <div className={styles['giveaway-form__card']}>
-          <div className={styles['giveaway-form__auth']}>
-            <h1>Instagram Giveaway Picker</h1>
-            <p>Connect your Instagram account to fetch comments and pick winners</p>
-            <button
-              onClick={() => signIn('instagram')}
-              className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--primary']}`}
-            >
-              Connect Instagram
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Show auth requirement only for URL input mode
+  const requiresAuth = inputMode === 'url' && !session;
 
   return (
     <div className={styles['giveaway-form__container']}>
       <div className={styles['giveaway-form__card']}>
-        <div className={styles['giveaway-form__header']}>          
-          <h1>Instagram Giveaway Picker</h1>
-          <button
-            type="button"
-            onClick={() => setShowSettings(!showSettings)}
-            className={styles['giveaway-form__settings-button']}
-            title="Color Settings"
-          >
-            ⚙️
-          </button>
-        </div>
-
-        {showSettings && (
-          <div className={styles['giveaway-form__settings-panel']}>
-            <div className={styles['giveaway-form__settings-header']}>
-              <h3>Color Theme</h3>
-            </div>
-            <div className={styles['giveaway-form__theme-options']}>
-              {THEME_GRADIENTS.map((theme, index) => (
-                <button
-                  key={theme.name}
-                  type="button"
-                  className={`${styles['giveaway-form__theme-option']} ${selectedTheme === index && !showCustomInput ? styles['giveaway-form__theme-option--active'] : ''}`}
-                  style={{ background: theme.gradient }}
-                  onClick={() => handleThemeSelect(index)}
-                  title={theme.name}
-                />
-              ))}
+        {requiresAuth ? (
+          <div className={styles['giveaway-form__auth']}>
+            <h1>Instagram Giveaway Picker</h1>
+            <p>Connect your Instagram account to fetch comments, or switch to CSV upload</p>
+            <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-lg)' }}>
               <button
-                type="button"
-                className={`${styles['giveaway-form__theme-option']} ${styles['giveaway-form__theme-option--custom']} ${showCustomInput ? styles['giveaway-form__theme-option--active'] : ''}`}
-                onClick={() => setShowCustomInput(!showCustomInput)}
-                title="Custom Color"
+                onClick={() => signIn('instagram')}
+                className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--primary']}`}
               >
-                +
+                Connect Instagram
+              </button>
+              <button
+                onClick={() => setInputMode('csv')}
+                className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--secondary']}`}
+              >
+                Use CSV Upload Instead
               </button>
             </div>
-            {showCustomInput && (
-              <div className={styles['giveaway-form__custom-hex']}>
-                <label htmlFor="custom-hex">Custom Hex Color:</label>
-                <input
-                  id="custom-hex"
-                  type="text"
-                  placeholder="#8b5cf6"
-                  value={customHex}
-                  onChange={handleCustomHexChange}
-                  maxLength={7}
-                />
+          </div>
+        ) : (
+          <>
+            <div className={styles['giveaway-form__header']}>          
+              <h1>Instagram Giveaway Picker</h1>
+              <button
+                type="button"
+                onClick={() => setShowSettings(!showSettings)}
+                className={styles['giveaway-form__settings-button']}
+                title="Color Settings"
+              >
+                ⚙️
+              </button>
+            </div>
+
+            {showSettings && (
+              <div className={styles['giveaway-form__settings-panel']}>
+                <div className={styles['giveaway-form__settings-header']}>
+                  <h3>Color Theme</h3>
+                </div>
+                <div className={styles['giveaway-form__theme-options']}>
+                  {THEME_GRADIENTS.map((theme, index) => (
+                    <button
+                      key={theme.name}
+                      type="button"
+                      className={`${styles['giveaway-form__theme-option']} ${selectedTheme === index && !showCustomInput ? styles['giveaway-form__theme-option--active'] : ''}`}
+                      style={{ background: theme.gradient }}
+                      onClick={() => handleThemeSelect(index)}
+                      title={theme.name}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    className={`${styles['giveaway-form__theme-option']} ${styles['giveaway-form__theme-option--custom']} ${showCustomInput ? styles['giveaway-form__theme-option--active'] : ''}`}
+                    onClick={() => setShowCustomInput(!showCustomInput)}
+                    title="Custom Color"
+                  >
+                    +
+                  </button>
+                </div>
+                {showCustomInput && (
+                  <div className={styles['giveaway-form__custom-hex']}>
+                    <label htmlFor="custom-hex">Custom Hex Color:</label>
+                    <input
+                      id="custom-hex"
+                      type="text"
+                      placeholder="#8b5cf6"
+                      value={customHex}
+                      onChange={handleCustomHexChange}
+                      maxLength={7}
+                    />
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        <div className={styles['giveaway-form__user-info']}>
-          <p>Connected as @{session.user?.name}</p>
-          <button
-            type="button"
-            onClick={() => signOut()}
-            className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--secondary']}`}
-          >
-            Disconnect
-          </button>
-        </div>
+            {session && (
+              <div className={styles['giveaway-form__user-info']}>
+                <p>Connected as @{session.user?.name}</p>
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--secondary']}`}
+                >
+                  Disconnect
+                </button>
+              </div>
+            )}
 
-        <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit}>
           <div className={styles['giveaway-form__field']}>
             <label>Input Method</label>
             <div className={styles['giveaway-form__radio-group']}>
@@ -477,6 +484,8 @@ export default function GiveawayForm() {
             {loading ? 'Processing...' : 'Pick Winners'}
           </button>
         </form>
+        </>
+        )}
       </div>
 
       {winners.length > 0 && (
