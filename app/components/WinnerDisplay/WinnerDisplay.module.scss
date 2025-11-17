@@ -301,6 +301,12 @@
   padding: 20px;
   backdrop-filter: blur(10px);
   animation: fadeIn 0.3s ease;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+    align-items: flex-start;
+  }
 
   @keyframes fadeIn {
     from {
@@ -316,6 +322,10 @@
     width: 100%;
     position: relative;
     animation: slideUp 0.3s ease;
+
+    @media (max-width: 768px) {
+      max-width: 100%;
+    }
 
     @keyframes slideUp {
       from {
@@ -336,16 +346,38 @@
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     color: white;
     text-align: center;
+
+    @media (max-width: 768px) {
+      padding: 32px 24px;
+      border-radius: 16px;
+    }
+
+    @media (max-width: 480px) {
+      padding: 24px 20px;
+      border-radius: 12px;
+    }
   }
 
   &__header {
     margin-bottom: 32px;
+
+    @media (max-width: 768px) {
+      margin-bottom: 24px;
+    }
 
     h1 {
       font-size: 36px;
       font-weight: 700;
       margin: 0;
       text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+
+      @media (max-width: 768px) {
+        font-size: 28px;
+      }
+
+      @media (max-width: 480px) {
+        font-size: 24px;
+      }
     }
   }
 
@@ -358,18 +390,44 @@
     background: rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     backdrop-filter: blur(10px);
+
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 480px) {
+      padding: 16px;
+      gap: 10px;
+      margin-bottom: 24px;
+      border-radius: 12px;
+    }
   }
 
   &__stat {
     display: flex;
     flex-direction: column;
     gap: 8px;
+
+    @media (max-width: 480px) {
+      gap: 6px;
+    }
   }
 
   &__stat-value {
     font-size: 28px;
     font-weight: 700;
     line-height: 1;
+
+    @media (max-width: 768px) {
+      font-size: 24px;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 20px;
+    }
   }
 
   &__stat-label {
@@ -378,6 +436,15 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
+
+    @media (max-width: 768px) {
+      font-size: 10px;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 9px;
+      letter-spacing: 0.3px;
+    }
   }
 
   &__winners {
@@ -385,6 +452,16 @@
     flex-direction: column;
     gap: 16px;
     margin-bottom: 32px;
+
+    @media (max-width: 768px) {
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 480px) {
+      gap: 10px;
+      margin-bottom: 20px;
+    }
   }
 
   &__winner {
@@ -396,6 +473,18 @@
     border-radius: 16px;
     backdrop-filter: blur(10px);
     transition: all 0.2s ease;
+
+    @media (max-width: 768px) {
+      gap: 16px;
+      padding: 16px 20px;
+      border-radius: 12px;
+    }
+
+    @media (max-width: 480px) {
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 10px;
+    }
   }
 
   &__winner-rank {
@@ -409,28 +498,67 @@
     font-size: 20px;
     font-weight: 700;
     flex-shrink: 0;
+
+    @media (max-width: 768px) {
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
+    }
+
+    @media (max-width: 480px) {
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
+    }
   }
 
   &__winner-info {
     flex: 1;
     text-align: left;
+    min-width: 0;
   }
 
   &__winner-name {
     font-size: 24px;
     font-weight: 600;
     margin-bottom: 4px;
+    word-break: break-word;
+
+    @media (max-width: 768px) {
+      font-size: 20px;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
   }
 
   &__winner-stats {
     font-size: 14px;
     opacity: 0.85;
     font-weight: 500;
+
+    @media (max-width: 768px) {
+      font-size: 13px;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 12px;
+    }
   }
 
   &__footer {
     font-size: 20px;
     font-weight: 600;
     opacity: 0.9;
+
+    @media (max-width: 768px) {
+      font-size: 18px;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 16px;
+    }
   }
 }
