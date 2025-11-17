@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Instagram Comment Scraper</title>
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+    }
+    
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+      color: #262626;
+    }
+    
+    .instructions {
+      font-size: 13px;
+      color: #737373;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    
+    .instructions ol {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    
+    .instructions li {
+      margin: 4px 0;
+    }
+    
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #0095f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    button:hover {
+      background: #0081d5;
+    }
+    
+    button:disabled {
+      background: #b2dffc;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      background: #f0f0f0;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #262626;
+      display: none;
+    }
+    
+    .status.visible {
+      display: block;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .warning {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    
+    .options {
+      margin: 12px 0;
+      padding: 12px;
+      background: #fafafa;
+      border-radius: 8px;
+    }
+    
+    .options label {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      color: #262626;
+      cursor: pointer;
+    }
+    
+    .options input[type="checkbox"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎣 Comment Scraper</h1>
+  
+  <div class="warning">
+    ⚠️ <strong>Important:</strong> Scroll down and click "View replies" to expand all comments first!
+  </div>
+  
+  <div class="instructions">
+    <strong>How to use:</strong>
+    <ol>
+      <li>Scroll down the post to load ALL comments</li>
+      <li>Click every "View replies" button</li>
+      <li>Click button below to scrape & download</li>
+    </ol>
+    <p style="margin-top: 8px; font-size: 12px; color: #8e8e8e;">
+      💡 If you get an error, refresh the page and try again
+    </p>
+    
+    <div class="options">
+      <label>
+        <input type="checkbox" id="excludePoster" checked />
+        Exclude post owner's comments
+      </label>
+    </div>
+  </div>
+  
+  <button id="scrapeBtn">Scrape Comments & Download CSV</button>
+  
+  <div id="status" class="status"></div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

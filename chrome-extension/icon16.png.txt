@@ -1,0 +1,11 @@
+Note: You need actual icon files. Create simple 16x16, 48x48, and 128x128 PNG icons.
+For now, you can use any PNG images or create them at:
+- https://www.favicon-generator.org/
+- Or use any simple icon generator
+
+Name them:
+- icon16.png
+- icon48.png  
+- icon128.png
+
+Place them in the chrome-extension folder.
