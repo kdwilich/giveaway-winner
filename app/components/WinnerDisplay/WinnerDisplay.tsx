@@ -88,7 +88,7 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
           </div>
         </div>
 
-        <div className={styles['winner-display__list']}>
+        <div className={`${styles['winner-display__list']} ${winners.length === 1 ? styles['winner-display__list--single'] : ''}`}>
           {winners.map((winner, index) => {
             const isExpanded = expandedWinners.has(index);
             return (
@@ -138,7 +138,7 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
                               <div className={styles['winner-display__entry-comment']}>"{entry.comment}"</div>
                               {entry.tags && entry.tags.length > 0 && (
                                 <div className={styles['winner-display__entry-tags']}>
-                                  Tags: {entry.tags.join(', ')}
+                                  Tag: @{entry.tags[0]}
                                 </div>
                               )}
                             </>

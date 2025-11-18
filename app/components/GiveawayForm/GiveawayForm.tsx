@@ -271,14 +271,20 @@ export default function GiveawayForm() {
       const lines = text.split('\n');
       const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
       
-      // Find column indices
-      const usernameIdx = headers.findIndex(h => h.includes('username'));
-      const commentIdx = headers.findIndex(h => h.includes('comment'));
-      const timestampIdx = headers.findIndex(h => h.includes('timestamp'));
+      // Validate required columns (flexible matching)
+      const usernameIdx = headers.findIndex(h => h === 'username');
+      const commentIdx = headers.findIndex(h => h === 'comment_text');
       
-      if (usernameIdx === -1 || commentIdx === -1) {
-        throw new Error('CSV must have "username" and "comment_text" columns');
+      if (usernameIdx === -1) {
+        throw new Error('CSV must have a "username" column');
       }
+      
+      if (commentIdx === -1) {
+        throw new Error('CSV must have a "comment_text" column');
+      }
+      
+      // Optional columns
+      const timestampIdx = headers.findIndex(h => h === 'timestamp');
       
       const comments: InstagramComment[] = [];
       
@@ -357,17 +363,6 @@ export default function GiveawayForm() {
 
       // Process entries and select winners
       const entries = processEntries(comments, criteriaWithManual);
-      
-      console.log('Processing results:', {
-        totalComments: comments.length,
-        totalEntries: entries.length,
-        requireTag: criteriaWithManual.requireTag,
-        sampleComments: comments.slice(0, 5).map(c => ({
-          username: c.username || c.from?.username,
-          text: c.text,
-          tags: c.text.match(/@(\w+)/g)
-        }))
-      });
       
       setTotalEntries(entries.length);
       
@@ -490,7 +485,7 @@ export default function GiveawayForm() {
                   <li>100% privacy - all processing in your browser</li>
                 </ul>
                 <a
-                  href="https://github.com/kdwilich/giveaway-winner/tree/main/chrome-extension"
+                  href="https://github.com/kdwilich/giveaway-winner-extension"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles['giveaway-form__extension-button']}
