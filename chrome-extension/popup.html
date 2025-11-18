@@ -194,6 +194,10 @@
       .options label {
         color: #fafafa;
       }
+      
+      .options > div {
+        color: #fafafa !important;
+      }
     }
     
     .options input[type="checkbox"] {
@@ -316,6 +320,7 @@
       background: rgba(139, 92, 246, 0.1);
       color: #8b5cf6;
       border: 1px solid rgba(139, 92, 246, 0.3);
+      font-weight: 600;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -326,22 +331,34 @@
       }
     }
 
-    .warning-banner {
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      color: #f59e0b;
-      padding: 10px 12px;
-      border-radius: 8px;
-      font-size: 11px;
-      margin-bottom: 14px;
-      line-height: 1.4;
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .progress-bar.visible {
+      display: block;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: #8b5cf6;
+      transition: width 0.3s ease;
+      border-radius: 3px;
     }
 
     @media (prefers-color-scheme: dark) {
-      .warning-banner {
-        background: rgba(251, 191, 36, 0.15);
-        border-color: rgba(251, 191, 36, 0.3);
-        color: #fbbf24;
+      .progress-bar {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .progress-bar-fill {
+        background: #a78bfa;
       }
     }
     
@@ -360,21 +377,16 @@
       Export Instagram comments to use with <a href="https://giveaway-winner.vercel.app/" target="_blank">Giveaway Picker</a> for fair winner selection.
     </div>
     
-    <div class="warning-banner">
-      <strong>⚠️ Important</strong>
-      Scroll down and expand all "View replies" buttons before scraping!
-    </div>
-    
     <div class="section">
       <div class="section-title">Instructions</div>
       <div class="instructions">
         <strong>How to use:</strong>
         <ol>
-          <li>Scroll down to load all comments</li>
-          <li>Click every "View replies" button</li>
-          <li>Click the scrape button below</li>
+          <li>Navigate to any Instagram post<br><small style="color: #999; font-size: 10px;">e.g., https://www.instagram.com/p/ABC123xyz/</small></li>
+          <li>Make sure you're logged in</li>
+          <li>Click the button below</li>
         </ol>
-        <div class="tip">💡 If you get an error, refresh the page and try again</div>
+        <div class="tip">💡 Extension will automatically fetch ALL comments via Instagram API</div>
       </div>
     </div>
     
@@ -387,10 +399,32 @@
         </label>
       </div>
     </div>
+
+    <div class="section">
+      <div class="section-title">Rate Limiting</div>
+      <div class="options">
+        <div style="display: block; margin-bottom: 10px; font-size: 14px; color: #1a1a1a; font-weight: 400;">
+          Delay between requests (seconds):
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="range" id="delaySlider" min="1" max="20" value="10" step="1" style="flex: 1; cursor: pointer; accent-color: #8b5cf6;" />
+          <span id="delayValue" style="font-weight: 600; min-width: 45px; color: #8b5cf6;">10s</span>
+        </div>
+        <div style="font-size: 11px; color: #666666; margin-top: 6px; line-height: 1.3;">
+          💡 Lower = faster but riskier. 10s recommended.
+        </div>
+      </div>
+    </div>
     
-    <button id="scrapeBtn">Scrape Comments & Download CSV</button>
+    <button id="scrapeBtn">Fetch All Comments & Download CSV</button>
+    
+    <button id="cancelBtn" style="display: none; margin-top: 10px; background: #ef4444;">Cancel Fetch</button>
     
     <div id="status" class="status"></div>
+    
+    <div id="progressBar" class="progress-bar">
+      <div id="progressBarFill" class="progress-bar-fill" style="width: 0%"></div>
+    </div>
   </div>
   
   <script src="popup.js"></script>

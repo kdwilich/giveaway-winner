@@ -29,4 +29,5 @@ export interface Winner {
   username: string;
   entryNumber: number;
   totalEntries: number;
+  entries?: GiveawayEntry[];
 }

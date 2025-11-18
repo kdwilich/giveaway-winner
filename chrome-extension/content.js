@@ -1,187 +1,262 @@
 
+// Global flag to track if scraping should be cancelled
+let shouldCancelScraping = false;
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'scrapeComments') {
+    const delaySeconds = request.delaySeconds || 10; // Default 10 seconds
     
-    try {
-      const result = scrapeAllComments();
-      sendResponse({ 
-        success: true, 
-        comments: result.comments,
-        postOwner: result.postOwner 
+    // Reset cancel flag when starting new scrape
+    shouldCancelScraping = false;
+    
+    // Progress callback to send updates back to popup
+    const sendProgress = (progress) => {
+      try {
+        chrome.runtime.sendMessage({
+          action: 'progress',
+          data: progress
+        });
+      } catch (error) {
+        // Popup was closed, cancel the scraping
+        console.log('Popup closed, cancelling scrape...');
+        shouldCancelScraping = true;
+      }
+    };
+
+    // Use GraphQL API to fetch comments
+    fetchCommentsViaGraphQL(sendProgress, delaySeconds)
+      .then(result => {
+        if (!shouldCancelScraping) {
+          try {
+            sendResponse({ 
+              success: true, 
+              comments: result.comments,
+              postOwner: result.postOwner 
+            });
+          } catch (error) {
+            console.log('Could not send response, storing in storage for later:', error);
+            // Store in chrome.storage for when popup reopens
+            chrome.storage.local.set({
+              completedFetch: {
+                comments: result.comments,
+                postOwner: result.postOwner,
+                timestamp: Date.now()
+              }
+            });
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching comments:', error);
+        if (!shouldCancelScraping) {
+          try {
+            sendResponse({ success: false, error: error.message });
+          } catch (e) {
+            console.log('Could not send error response:', e);
+          }
+        }
+      })
+      .finally(() => {
+        // Cleanup
+        shouldCancelScraping = false;
       });
-    } catch (error) {
-      console.error('Error scraping comments:', error);
-      sendResponse({ success: false, error: error.message });
-    }
+    return true; // Keep message channel open for async response
   }
-  return true; // Keep message channel open for async response
+  
+  if (request.action === 'cancelScrape') {
+    shouldCancelScraping = true;
+    console.log('Scraping cancelled by user');
+    sendResponse({ cancelled: true });
+    return true;
+  }
+  
+  return false;
 });
 
-function scrapeAllComments() {
-  const comments = [];
-  
-  // Strategy: Comments section is typically in an <article> or after the post
-  // Find all time elements (each comment has a timestamp)
-  // Then work backwards to find the associated comment data
-  
-  const timeElements = document.querySelectorAll('time[datetime]');
-  
-  timeElements.forEach((timeEl, index) => {
+// Extract shortcode from current URL
+function getShortcodeFromUrl() {
+  const match = window.location.pathname.match(/\/p\/([^\/]+)/);
+  return match ? match[1] : null;
+}
+
+// Fetch comments using Instagram's GraphQL API
+async function fetchCommentsViaGraphQL(sendProgress, delaySeconds = 10) {
+  const shortcode = getShortcodeFromUrl();
+  if (!shortcode) {
+    throw new Error('Could not extract post shortcode from URL');
+  }
+
+  const allComments = [];
+  let hasNextPage = true;
+  let endCursor = '';
+  let postOwner = null;
+  let requestCount = 0;
+  let totalCommentCount = 0;
+  const MAX_REQUESTS = 100; // Safety limit
+
+  console.log(`Starting to fetch comments for post: ${shortcode}`);
+  console.log(`Using ${delaySeconds} second delay between requests`);
+
+  while (hasNextPage && requestCount < MAX_REQUESTS && !shouldCancelScraping) {
+    requestCount++;
+    
     try {
-      // Walk up the DOM to find a container that has:
-      // 1. A profile picture
-      // 2. A username link
-      // 3. Comment text
-      // 4. This time element
+      // Check if cancelled before making request
+      if (shouldCancelScraping) {
+        console.log('Scraping cancelled, stopping...');
+        break;
+      }
       
-      let container = timeEl;
-      let maxLevels = 8; // Walk up max 8 levels
+      // Build GraphQL query
+      const variables = {
+        shortcode: shortcode,
+        first: 50, // Fetch 50 comments per request
+        after: endCursor
+      };
+
+      const url = `https://www.instagram.com/graphql/query/?query_hash=bc3296d1ce80a24b1b6e40b1e72903f5&variables=${encodeURIComponent(JSON.stringify(variables))}`;
       
-      for (let i = 0; i < maxLevels; i++) {
-        container = container.parentElement;
-        if (!container) break;
+      console.log(`Fetching batch ${requestCount} (after: ${endCursor || 'start'})`);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'x-ig-app-id': '936619743392459', // Instagram web app ID
+          'x-requested-with': 'XMLHttpRequest'
+        },
+        credentials: 'include' // Include cookies for authentication
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Navigate to comments data
+      const edges = data?.data?.shortcode_media?.edge_media_to_parent_comment?.edges || [];
+      const pageInfo = data?.data?.shortcode_media?.edge_media_to_parent_comment?.page_info;
+      
+      // Extract post owner and total count from first response
+      if (!postOwner && data?.data?.shortcode_media?.owner?.username) {
+        postOwner = data.data.shortcode_media.owner.username;
+      }
+      
+      // Get total comment count from first response
+      if (totalCommentCount === 0 && data?.data?.shortcode_media?.edge_media_to_parent_comment?.count) {
+        totalCommentCount = data.data.shortcode_media.edge_media_to_parent_comment.count;
+        console.log(`Total comments to fetch: ${totalCommentCount}`);
+      }
+
+      console.log(`Received ${edges.length} comments. Has next page: ${pageInfo?.has_next_page}`);
+
+      // Process comments
+      for (const edge of edges) {
+        const node = edge.node;
         
-        // Check if this container has the comment pattern
-        const profilePic = container.querySelector('img[alt*="profile picture"]');
-        const userLinks = container.querySelectorAll('a[href^="/"]');
-        const hasText = container.textContent && container.textContent.length > 20;
-        
-        if (profilePic && userLinks.length > 0 && hasText) {
-          // This looks like a comment container
-          const comment = parseCommentContainer(container, timeEl);
-          if (comment) {
-            comments.push(comment);
-            break;
+        // Add parent comment
+        allComments.push({
+          username: node.owner?.username || 'unknown',
+          comment_text: node.text || '',
+          timestamp: node.created_at ? new Date(node.created_at * 1000).toISOString() : 'unknown',
+          is_reply: false
+        });
+
+        // Add replies if any
+        if (node.edge_threaded_comments?.edges) {
+          for (const replyEdge of node.edge_threaded_comments.edges) {
+            const reply = replyEdge.node;
+            allComments.push({
+              username: reply.owner?.username || 'unknown',
+              comment_text: reply.text || '',
+              timestamp: reply.created_at ? new Date(reply.created_at * 1000).toISOString() : 'unknown',
+              is_reply: true
+            });
           }
         }
       }
+
+      // Send progress update
+      if (sendProgress) {
+        try {
+          const progress = {
+            current: allComments.length,
+            total: totalCommentCount || allComments.length,
+            percent: totalCommentCount ? Math.round((allComments.length / totalCommentCount) * 100) : 0,
+            comments: allComments, // Include current comments for cancellation
+            postOwner: postOwner
+          };
+          sendProgress(progress);
+        } catch (error) {
+          // Popup closed, cancel scraping
+          console.log('Progress update failed (popup closed), cancelling...');
+          shouldCancelScraping = true;
+          break;
+        }
+      }
+
+      // Check if there are more pages
+      hasNextPage = pageInfo?.has_next_page || false;
+      endCursor = pageInfo?.end_cursor || '';
+
+      // Rate limiting: wait with countdown
+      if (hasNextPage && !shouldCancelScraping) {
+        console.log(`Waiting ${delaySeconds} seconds before next request...`);
+        
+        // Send countdown updates every second
+        for (let i = delaySeconds; i > 0; i--) {
+          // Check if cancelled during countdown (multiple times per second for responsiveness)
+          if (shouldCancelScraping) {
+            console.log('Scraping cancelled during countdown');
+            break;
+          }
+          
+          if (sendProgress) {
+            try {
+              sendProgress({
+                current: allComments.length,
+                total: totalCommentCount || allComments.length,
+                percent: totalCommentCount ? Math.round((allComments.length / totalCommentCount) * 100) : 0,
+                countdown: i,
+                comments: allComments,
+                postOwner: postOwner
+              });
+            } catch (error) {
+              // Popup closed, cancel scraping
+              console.log('Countdown update failed (popup closed), cancelling...');
+              shouldCancelScraping = true;
+              break;
+            }
+          }
+          
+          // Wait 1 second but check cancellation every 100ms
+          for (let j = 0; j < 10; j++) {
+            if (shouldCancelScraping) break;
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
+          if (shouldCancelScraping) break;
+        }
+      }
+
     } catch (error) {
-      console.error(`Error parsing time element ${index}:`, error);
-    }
-  });
-  
-  // Remove duplicates (same username + text + timestamp)
-  const uniqueComments = [];
-  const seen = new Set();
-  comments.forEach(comment => {
-    const key = `${comment.username}:${comment.comment_text}:${comment.timestamp}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      uniqueComments.push(comment);
-    }
-  });
-  
-  // Identify post owner from the first comment (should be the caption)
-  const postOwnerUsername = uniqueComments.length > 0 ? uniqueComments[0].username : null;
-
-  return {
-    comments: uniqueComments,
-    postOwner: postOwnerUsername
-  };
-}
-
-function parseCommentContainer(container, timeElement) {
-  // Extract username from profile link
-  // Look for any link starting with "/" but exclude post/comment links
-  const userLinks = container.querySelectorAll('a[href^="/"]');
-  let username = null;
-  
-  for (const link of userLinks) {
-    const href = link.getAttribute('href');
-    // Skip post links (/p/...), comment links (/c/...), and root (/)
-    if (href && href !== '/' && !href.includes('/p/') && !href.includes('/c/')) {
-      const path = href.replace(/^\//, '').replace(/\/$/, '');
-      // Username should be a single path segment without slashes
-      if (path && !path.includes('/')) {
-        username = path;
+      // Check if error is due to popup closing
+      if (error.message && error.message.includes('Extension context invalidated')) {
+        console.log('Extension context invalidated (popup closed), stopping...');
+        shouldCancelScraping = true;
         break;
       }
+      console.error(`Error in batch ${requestCount}:`, error);
+      // Continue with what we have if there's an error
+      break;
     }
   }
-  
-  if (!username) return null;
-  
-  // Extract comment text
-  // Find the text between the username and the timestamp/action buttons
-  // Get all text nodes and spans, exclude UI elements
-  const allText = [];
-  const walker = document.createTreeWalker(
-    container,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: function(node) {
-        const text = node.textContent.trim();
-        if (!text) return NodeFilter.FILTER_REJECT;
-        
-        // Get parent element
-        const parent = node.parentElement;
-        if (!parent) return NodeFilter.FILTER_REJECT;
-        
-        // Skip if parent contains a link (likely username)
-        if (parent.querySelector('a')) return NodeFilter.FILTER_REJECT;
-        
-        // Skip if it's a UI element text
-        if (text.match(/^(reply|like|view|hide|load more)/i)) return NodeFilter.FILTER_REJECT;
-        if (text.match(/^\d+\s+(like|reply|replies)/i)) return NodeFilter.FILTER_REJECT;
-        if (text.match(/^\d+[dhwms]$/)) return NodeFilter.FILTER_REJECT;
-        if (text === username) return NodeFilter.FILTER_REJECT;
-        
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    }
-  );
-  
-  let node;
-  while (node = walker.nextNode()) {
-    const text = node.textContent.trim();
-    if (text.length > 0) {
-      allText.push(text);
-    }
-  }
-  
-  // Combine text and clean up
-  let commentText = allText.join(' ').trim();
-  
-  // Remove username prefix if present
-  if (commentText.startsWith(username)) {
-    commentText = commentText.substring(username.length).trim();
-  }
-  
-  // Allow any comment text, even if it's short or empty
-  // The app will handle filtering based on giveaway rules
-  
-  // Extract timestamp
-  let timestamp = 'unknown';
-  
-  if (timeElement) {
-    timestamp = timeElement.getAttribute('datetime') || timeElement.textContent?.trim() || 'unknown';
-  } else {
-    // Try to find time element in container
-    const timeEl = container.querySelector('time[datetime]');
-    if (timeEl) {
-      timestamp = timeEl.getAttribute('datetime') || timeEl.textContent?.trim() || 'unknown';
-    }
-  }
-  
-  // Determine if reply by counting UL nesting depth
-  let element = container;
-  let listDepth = 0;
-  
-  while (element && element !== document.body) {
-    if (element.tagName === 'UL') {
-      listDepth++;
-    }
-    element = element.parentElement;
-  }
-  
-  // If nested inside 2+ lists, it's likely a reply
-  const isReply = listDepth >= 2;
-  
+
+  console.log(`Finished fetching. Total comments: ${allComments.length}`);
+
   return {
-    username,
-    comment_text: commentText,
-    timestamp,
-    is_reply: isReply
+    comments: allComments,
+    postOwner: postOwner
   };
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useSession, signIn, signOut } from 'next-auth/react';
 import { GiveawayCriteria, InstagramComment, Winner } from '@/types/giveaway';
 import { processEntries, selectWinners } from '@/lib/giveawayLogic';
 import styles from './GiveawayForm.module.scss';
@@ -19,8 +18,6 @@ const THEME_GRADIENTS = [
 ];
 
 export default function GiveawayForm() {
-  const { data: session, status } = useSession();
-  const [inputMode, setInputMode] = useState<'url' | 'csv'>('url');
   const [showSettings, setShowSettings] = useState(false);
   const winnerDisplayRef = useRef<HTMLDivElement>(null);
   const [selectedTheme, setSelectedTheme] = useState(0);
@@ -47,6 +44,7 @@ export default function GiveawayForm() {
   const [error, setError] = useState('');
   const [totalEntries, setTotalEntries] = useState(0);
   const [uniqueUsers, setUniqueUsers] = useState(0);
+  const [fetchProgress, setFetchProgress] = useState('');
 
   // Scroll to winners when they're populated
   useEffect(() => {
@@ -55,11 +53,7 @@ export default function GiveawayForm() {
     }
   }, [winners]);
 
-  // Clear winners when input mode changes
-  useEffect(() => {
-    setWinners([]);
-    setError('');
-  }, [inputMode]);
+
 
   // Load saved theme from localStorage on mount
   useEffect(() => {
@@ -81,6 +75,9 @@ export default function GiveawayForm() {
         setSelectedTheme(index);
         updateAppTheme(THEME_GRADIENTS[index].gradient);
       }
+    } else {
+      // Set default theme (Purple/index 0)
+      updateAppTheme(THEME_GRADIENTS[0].gradient);
     }
   }, []);
 
@@ -88,6 +85,28 @@ export default function GiveawayForm() {
   const extractPrimaryColor = (gradient: string): string => {
     const match = gradient.match(/#[0-9A-Fa-f]{6}/);
     return match ? match[0] : '#a88bfb';
+  };
+
+  // Calculate relative luminance and determine if we need dark or light text
+  const getContrastColor = (hex: string): string => {
+    // Convert hex to RGB
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    
+    // Calculate relative luminance using sRGB
+    const toLinear = (c: number) => {
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    
+    const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    
+    // Calculate contrast ratios with white and black
+    const contrastWithWhite = (1.0 + 0.05) / (luminance + 0.05);
+    const contrastWithBlack = (luminance + 0.05) / (0.0 + 0.05);
+    
+    // Return whichever has better contrast
+    return contrastWithBlack > contrastWithWhite ? '#1a1a1a' : '#ffffff';
   };
 
   // Convert hex to OKLCH and generate accent color
@@ -148,8 +167,12 @@ export default function GiveawayForm() {
   const updateAppTheme = (gradient: string) => {
     const primaryColor = extractPrimaryColor(gradient);
     const accentColor = generateAccentColor(primaryColor);
+    const buttonTextColor = getContrastColor(primaryColor);
+    
+    console.log('Setting button text color:', buttonTextColor, 'for primary color:', primaryColor);
     
     document.documentElement.style.setProperty('--color-primary', primaryColor);
+    document.documentElement.style.setProperty('--color-button-text', buttonTextColor);
     
     // Adjust hover color (slightly darker)
     const r = parseInt(primaryColor.slice(1, 3), 16);
@@ -315,32 +338,11 @@ export default function GiveawayForm() {
     setError('');
     setWinners([]);
     setLoading(true);
+    setFetchProgress('');
 
     try {
-      let comments: InstagramComment[] = [];
-      
-      // Use CSV comments if uploaded
-      if (inputMode === 'csv' && csvComments.length > 0) {
-        comments = csvComments;
-      }
-      // Fetch Instagram comments if URL provided
-      else if (criteria.postUrl && criteria.postUrl.trim()) {
-        const response = await fetch('/api/instagram/comments', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ postUrl: criteria.postUrl }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch comments');
-        }
-
-        const data = await response.json();
-        comments = data.comments;
-      }
+      // Use CSV comments (only input method now)
+      const comments: InstagramComment[] = csvComments;
 
       // Parse manual entries
       const manualEntries = manualEntriesText
@@ -388,57 +390,20 @@ export default function GiveawayForm() {
     }
   };
 
-  if (status === 'loading') {
-    return (
-      <div className={styles['giveaway-form__container']}>
-        <div className={styles['giveaway-form__card']}>
-          <div className={styles['giveaway-form__loading']}>
-            <div className={styles['giveaway-form__loading-spinner']} />
-            <span>Loading...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show auth requirement only for URL input mode
-  const requiresAuth = inputMode === 'url' && !session;
-
   return (
     <div className={styles['giveaway-form__container']}>
       <div className={styles['giveaway-form__card']}>
-        {requiresAuth ? (
-          <div className={styles['giveaway-form__auth']}>
-            <h1>Instagram Giveaway Picker</h1>
-            <p>Connect your Instagram account to fetch comments, or switch to CSV upload</p>
-            <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-lg)', justifyContent: 'center' }}>
-              <button
-                onClick={() => signIn('instagram')}
-                className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--primary']}`}
-              >
-                Connect Instagram
-              </button>
-              <button
-                onClick={() => setInputMode('csv')}
-                className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--secondary']}`}
-              >
-                Use CSV Upload Instead
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className={styles['giveaway-form__header']}>          
-              <h1>Instagram Giveaway Picker</h1>
-              <button
-                type="button"
-                onClick={() => setShowSettings(!showSettings)}
-                className={styles['giveaway-form__settings-button']}
-                title="Color Settings"
-              >
-                ⚙️
-              </button>
-            </div>
+        <div className={styles['giveaway-form__header']}>          
+          <h1>Instagram Giveaway Picker</h1>
+          <button
+            type="button"
+            onClick={() => setShowSettings(!showSettings)}
+            className={styles['giveaway-form__settings-button']}
+            title="Color Settings"
+          >
+            ⚙️
+          </button>
+        </div>
 
             {showSettings && (
               <div className={styles['giveaway-form__settings-panel']}>
@@ -488,78 +453,65 @@ export default function GiveawayForm() {
               </div>
             )}
 
-            {session && (
-              <div className={styles['giveaway-form__user-info']}>
-                <p>Connected as @{session.user?.name}</p>
-                <button
-                  type="button"
-                  onClick={() => signOut()}
-                  className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--secondary']}`}
-                >
-                  Disconnect
-                </button>
-              </div>
-            )}
-
             <form onSubmit={handleSubmit}>
-          <div className={styles['giveaway-form__field']}>
-            <label>Input Method</label>
-            <div className={styles['giveaway-form__radio-group']}>
-              <div className={styles['giveaway-form__radio']}>
+              <div style={{ 
+                background: 'rgba(168, 139, 251, 0.05)',
+                border: '2px solid rgba(168, 139, 251, 0.2)',
+                borderRadius: 'var(--border-radius-md)',
+                padding: 'var(--spacing-lg)',
+                marginBottom: 'var(--spacing-lg)'
+              }}>
+                <h3 style={{ 
+                  margin: '0 0 var(--spacing-sm) 0', 
+                  color: 'var(--color-primary)',
+                  fontSize: '16px',
+                  fontWeight: 600
+                }}>
+                  📦 How to Get Instagram Comments
+                </h3>
+                <p style={{ 
+                  margin: '0 0 var(--spacing-sm) 0',
+                  color: 'var(--text-secondary)',
+                  fontSize: '14px',
+                  lineHeight: '1.6'
+                }}>
+                  Use our free Chrome extension to fetch ALL comments from any Instagram post and export to CSV:
+                </p>
+                <ul style={{ 
+                  margin: '0 0 var(--spacing-md) 0',
+                  paddingLeft: 'var(--spacing-lg)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '14px',
+                  lineHeight: '1.6'
+                }}>
+                  <li>Works with any post you can view (public or private)</li>
+                  <li>Fetches all comments including replies automatically</li>
+                  <li>Progress tracking with customizable rate limiting</li>
+                  <li>100% privacy - all processing in your browser</li>
+                </ul>
+                <a
+                  href="https://github.com/kdwilich/giveaway-winner/tree/main/chrome-extension"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles['giveaway-form__extension-button']}
+                >
+                  📥 Get Chrome Extension (Free)
+                </a>
+              </div>
+              
+              <div className={styles['giveaway-form__field']}>
+                <label htmlFor="csvFile">Upload CSV File</label>
                 <input
-                  type="radio"
-                  id="inputUrl"
-                  name="inputMode"
-                  checked={inputMode === 'url'}
-                  onChange={() => setInputMode('url')}
+                  type="file"
+                  id="csvFile"
+                  accept=".csv"
+                  onChange={handleCsvUpload}
                 />
-                <label htmlFor="inputUrl">Instagram URL</label>
+                <div className={styles['giveaway-form__help-text']}>
+                  Upload CSV from Chrome extension with columns: username, comment_text, timestamp
+                  {csvComments.length > 0 && ` (${csvComments.length} comments loaded)`}
+                </div>
               </div>
-              <div className={styles['giveaway-form__radio']}>
-                <input
-                  type="radio"
-                  id="inputCsv"
-                  name="inputMode"
-                  checked={inputMode === 'csv'}
-                  onChange={() => setInputMode('csv')}
-                />
-                <label htmlFor="inputCsv">Upload CSV</label>
-              </div>
-            </div>
-          </div>
-
-          {inputMode === 'url' ? (
-            <div className={styles['giveaway-form__field']}>
-              <label htmlFor="postUrl">Instagram Post URL</label>
-              <input
-                type="text"
-                id="postUrl"
-                placeholder="https://www.instagram.com/p/..."
-                value={criteria.postUrl || ''}
-                onChange={(e) => setCriteria({ ...criteria, postUrl: e.target.value })}
-              />
-              <div className={styles['giveaway-form__help-text']}>
-                Paste the Instagram post URL to fetch comments
-              </div>
-              <div className={styles['giveaway-form__help-text']} style={{ color: 'var(--color-warning)', marginTop: 'var(--spacing-xs)' }}>
-                ⚠️ Note: Instagram's API limitations may prevent retrieval of all comments. For best accuracy, use the Chrome extension to export comments to CSV.
-              </div>
-            </div>
-          ) : (
-            <div className={styles['giveaway-form__field']}>
-              <label htmlFor="csvFile">Upload CSV File</label>
-              <input
-                type="file"
-                id="csvFile"
-                accept=".csv"
-                onChange={handleCsvUpload}
-              />
-              <div className={styles['giveaway-form__help-text']}>
-                Upload CSV from Chrome extension with columns: username, comment_text, timestamp
-                {csvComments.length > 0 && ` (${csvComments.length} comments loaded)`}
-              </div>
-            </div>
-          )}
 
           <div className={styles['giveaway-form__field']}>
             <div className={styles['giveaway-form__checkbox']}>
@@ -711,6 +663,19 @@ export default function GiveawayForm() {
             </div>
           )}
 
+          {fetchProgress && (
+            <div style={{ 
+              color: 'var(--color-primary)', 
+              marginBottom: 'var(--spacing-lg)',
+              padding: 'var(--spacing-md)',
+              background: 'rgba(168, 139, 251, 0.1)',
+              borderRadius: 'var(--border-radius-md)',
+              border: '1px solid rgba(168, 139, 251, 0.2)'
+            }}>
+              {fetchProgress}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
@@ -719,8 +684,6 @@ export default function GiveawayForm() {
             {loading ? 'Processing...' : 'Pick Winners'}
           </button>
         </form>
-        </>
-        )}
       </div>
 
       {winners.length > 0 && (

@@ -17,6 +17,7 @@ export function processEntries(
   
   // Track unique tags per user when requireTag is true
   const userUniqueTags = new Map<string, Set<string>>();
+  const userTagComments = new Map<string, Map<string, string>>(); // Track which comment contained each tag
   
   // Process Instagram comments
   comments.forEach(comment => {
@@ -33,11 +34,18 @@ export function processEntries(
       // Track unique tags per user
       if (!userUniqueTags.has(username)) {
         userUniqueTags.set(username, new Set());
+        userTagComments.set(username, new Map());
       }
       const userTags = userUniqueTags.get(username)!;
+      const tagCommentMap = userTagComments.get(username)!;
       
-      // Add each tag from this comment
-      tags.forEach(tag => userTags.add(tag));
+      // Add each tag from this comment and remember the full comment text
+      tags.forEach(tag => {
+        if (!userTags.has(tag)) {
+          userTags.add(tag);
+          tagCommentMap.set(tag, comment.text); // Store full comment for this tag
+        }
+      });
       
       // Don't create entries yet - we'll do it after processing all comments
     } else {
@@ -61,10 +69,11 @@ export function processEntries(
   // When requireTag is true, create one entry per unique tag per user
   if (criteria.requireTag) {
     userUniqueTags.forEach((tags, username) => {
+      const tagCommentMap = userTagComments.get(username)!;
       tags.forEach(tag => {
         entries.push({
           username,
-          comment: `@${tag}`, // Represent the tag that earned this entry
+          comment: tagCommentMap.get(tag) || `@${tag}`, // Use full comment or fallback to just tag
           tags: [tag],
         });
       });
@@ -128,14 +137,15 @@ export function selectWinners(
       
       // Ensure same user doesn't win multiple times
       if (!winnerUsernames.has(entry.username)) {
-        const totalEntriesForUser = eligibleEntries.filter(
+        const userEntries = eligibleEntries.filter(
           e => e.username === entry.username
-        ).length;
+        );
         
         winners.push({
           username: entry.username,
           entryNumber: randomIndex + 1,
-          totalEntries: totalEntriesForUser,
+          totalEntries: userEntries.length,
+          entries: userEntries,
         });
         
         winnerUsernames.add(entry.username);

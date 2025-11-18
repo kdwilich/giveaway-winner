@@ -13,19 +13,37 @@ interface WinnerDisplayProps {
 
 export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shareGradient }: WinnerDisplayProps) {
   const [showShareView, setShowShareView] = useState(false);
+  const [expandedWinners, setExpandedWinners] = useState<Set<number>>(new Set());
+  const [showShareLink, setShowShareLink] = useState(false);
+
+  const toggleExpanded = (index: number) => {
+    const newExpanded = new Set(expandedWinners);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedWinners(newExpanded);
+  };
+
+  const generateShareLink = () => {
+    const data = {
+      winners: winners.map(w => ({ username: w.username, entries: w.totalEntries })),
+      totalEntries,
+      uniqueUsers,
+      gradient: shareGradient
+    };
+    const encoded = btoa(JSON.stringify(data));
+    const url = `${window.location.origin}/share?data=${encoded}`;
+    
+    navigator.clipboard.writeText(url);
+    setShowShareLink(true);
+    setTimeout(() => setShowShareLink(false), 3000);
+  };
 
   const copyWinners = () => {
     const text = winners.map((w, i) => `${i + 1}. @${w.username}`).join('\n');
     navigator.clipboard.writeText(text);
-  };
-
-  const shareToInstagram = () => {
-    const text = winners.map((w, i) => `${i + 1}. @${w.username}`).join('\n');
-    const shareText = `🎉 Giveaway Winners! 🎉\n\n${text}\n\nCongratulations! 🎊`;
-    
-    // Copy to clipboard for easy sharing
-    navigator.clipboard.writeText(shareText);
-    alert('Winners copied to clipboard! You can now paste in Instagram Stories.');
   };
   
   const openShareView = () => {
@@ -71,25 +89,77 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
         </div>
 
         <div className={styles['winner-display__list']}>
-          {winners.map((winner, index) => (
-            <div key={`${winner.username}-${index}`} className={styles['winner-display__winner']}>
-              <div className={styles['winner-display__winner-info']}>
-                <div className={styles['winner-display__winner-rank']}>
-                  {index + 1}
+          {winners.map((winner, index) => {
+            const isExpanded = expandedWinners.has(index);
+            return (
+              <div key={`${winner.username}-${index}`} className={styles['winner-display__winner']}>
+                <div className={styles['winner-display__winner-header']}>
+                  <div className={styles['winner-display__winner-info']}>
+                    <div className={styles['winner-display__winner-rank']}>
+                      {index + 1}
+                    </div>
+                    <div className={styles['winner-display__winner-details']}>
+                      <h3>@{winner.username}</h3>
+                      <p>
+                        {winner.totalEntries} {winner.totalEntries === 1 ? 'entry' : 'entries'} • 
+                        {' '}{((winner.totalEntries / totalEntries) * 100).toFixed(2)}% chance to win
+                      </p>
+                    </div>
+                  </div>
+                  <div className={styles['winner-display__winner-actions']}>
+                    <div className={styles['winner-display__winner-badge']}>
+                      Winner
+                    </div>
+                    <button
+                      onClick={() => toggleExpanded(index)}
+                      className={styles['winner-display__expand-button']}
+                      aria-label="Toggle entries"
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+                      >
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className={styles['winner-display__winner-details']}>
-                  <h3>@{winner.username}</h3>
-                  <p>
-                    {winner.totalEntries} {winner.totalEntries === 1 ? 'entry' : 'entries'} • 
-                    {' '}{((winner.totalEntries / totalEntries) * 100).toFixed(2)}% chance to win
-                  </p>
-                </div>
+                {isExpanded && winner.entries && winner.entries.length > 0 && (
+                  <div className={styles['winner-display__entries']}>
+                    <h4>Entries ({winner.entries.length}):</h4>
+                    <div className={styles['winner-display__entries-list']}>
+                      {winner.entries.map((entry, entryIndex) => (
+                        <div key={entryIndex} className={styles['winner-display__entry']}>
+                          {entry.comment ? (
+                            <>
+                              <div className={styles['winner-display__entry-comment']}>"{entry.comment}"</div>
+                              {entry.tags && entry.tags.length > 0 && (
+                                <div className={styles['winner-display__entry-tags']}>
+                                  Tags: {entry.tags.join(', ')}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className={styles['winner-display__entry-manual']}>Manual Entry</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {isExpanded && (!winner.entries || winner.entries.length === 0) && (
+                  <div className={styles['winner-display__entries']}>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                      No entry details available.
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className={styles['winner-display__winner-badge']}>
-                Winner
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className={styles['winner-display__actions']}>
@@ -100,10 +170,10 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
             📋 Copy Winners
           </button>
           <button
-            onClick={shareToInstagram}
+            onClick={generateShareLink}
             className={`${styles['winner-display__button']} ${styles['winner-display__button--secondary']}`}
           >
-            📱 Copy for Instagram Story
+            {showShareLink ? '✓ Link Copied!' : '🔗 Share Link'}
           </button>
           <button
             onClick={openShareView}
@@ -142,7 +212,7 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
                 </div>
               </div>
 
-              <div className={styles['share-view__winners']}>
+              <div className={`${styles['share-view__winners']} ${winners.length > 5 ? styles['share-view__winners--condensed'] : ''}`}>
                 {winners.map((winner, index) => (
                   <div key={`${winner.username}-${index}`} className={styles['share-view__winner']}>
                     <div className={styles['share-view__winner-rank']}>
@@ -152,9 +222,11 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
                       <div className={styles['share-view__winner-name']}>
                         @{winner.username}
                       </div>
-                      <div className={styles['share-view__winner-stats']}>
-                        {winner.totalEntries} {winner.totalEntries === 1 ? 'entry' : 'entries'} • {((winner.totalEntries / totalEntries) * 100).toFixed(1)}% chance
-                      </div>
+                      {winners.length <= 5 && (
+                        <div className={styles['share-view__winner-stats']}>
+                          {winner.totalEntries} {winner.totalEntries === 1 ? 'entry' : 'entries'} • {((winner.totalEntries / totalEntries) * 100).toFixed(1)}% chance
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
