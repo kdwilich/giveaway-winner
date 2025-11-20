@@ -9,7 +9,7 @@ export default function Home() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'Instagram Giveaway Picker',
+    name: 'Lucky Pick - Free Instagram Giveaway Picker',
     description: 'Free Instagram giveaway picker tool for selecting random winners from Instagram comments',
     applicationCategory: 'UtilityApplication',
     operatingSystem: 'Web Browser',

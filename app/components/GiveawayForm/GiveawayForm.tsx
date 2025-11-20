@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { GiveawayCriteria, InstagramComment, Winner } from '@/types/giveaway';
 import { processEntries, selectWinners } from '@/lib/giveawayLogic';
 import styles from './GiveawayForm.module.scss';
@@ -29,16 +30,21 @@ export default function GiveawayForm() {
     uniqueEntriesOnly: false,
     maxEntriesPerUser: 0,
     requireTag: true,
+    minTagsRequired: 1,
+    minCommentsRequired: 1,
     manualEntries: [],
   });
   
   const [manualEntriesText, setManualEntriesText] = useState('');
   const [showManualEntries, setShowManualEntries] = useState(false);
   const [showMaxEntries, setShowMaxEntries] = useState(false);
+  const [showMinRequirement, setShowMinRequirement] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvComments, setCsvComments] = useState<InstagramComment[]>([]);
   const [winnersInput, setWinnersInput] = useState('1');
   const [maxEntriesInput, setMaxEntriesInput] = useState('1');
+  const [minTagsInput, setMinTagsInput] = useState('1');
+  const [minCommentsInput, setMinCommentsInput] = useState('1');
   const [loading, setLoading] = useState(false);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [error, setError] = useState('');
@@ -88,10 +94,17 @@ export default function GiveawayForm() {
   };
 
   // Calculate relative luminance and determine if we need dark or light text
-  const getContrastColor = (): string => {
-    // Always return white for button text to ensure good contrast
-    // Most theme colors are vibrant and work better with white text
-    return '#ffffff';
+  const getContrastColor = (hex: string): string => {
+    // Convert hex to RGB
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    // Calculate relative luminance
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+    // Return black text for light backgrounds, white text for dark backgrounds
+    return luminance > 0.5 ? '#1a1a1a' : '#ffffff';
   };
 
   // Convert hex to OKLCH and generate accent color
@@ -152,7 +165,7 @@ export default function GiveawayForm() {
   const updateAppTheme = (gradient: string) => {
     const primaryColor = extractPrimaryColor(gradient);
     const accentColor = generateAccentColor(primaryColor);
-    const buttonTextColor = getContrastColor();
+    const buttonTextColor = getContrastColor(primaryColor);
     
     console.log('Setting button text color:', buttonTextColor, 'for primary color:', primaryColor);
     
@@ -374,15 +387,27 @@ export default function GiveawayForm() {
     <div className={styles['giveaway-form__container']}>
       <div className={styles['giveaway-form__card']}>
         <div className={styles['giveaway-form__header']}>          
-          <h1>Instagram Giveaway Picker</h1>
-          <button
-            type="button"
-            onClick={() => setShowSettings(!showSettings)}
-            className={styles['giveaway-form__settings-button']}
-            title="Color Settings"
-          >
-            ⚙️
-          </button>
+          <div>
+            <h1>Lucky Pick</h1>
+            <p className={styles['giveaway-form__subtitle']}>Free Instagram Giveaway Picker</p>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
+            <Link href="/about" className={styles['giveaway-form__about-link']} title="About">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#a98afb">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+              </svg>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowSettings(!showSettings)}
+              className={styles['giveaway-form__settings-button']}
+              title="Color Settings"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#a98afb">
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
             {showSettings && (
@@ -479,7 +504,8 @@ export default function GiveawayForm() {
                 </a>
               </div>
               
-              <div className={styles['giveaway-form__field']}>
+              {/* CSV Upload Section */}
+              <div className={styles['giveaway-form__field']} style={{ marginTop: 'var(--spacing-xl)' }}>
                 <label htmlFor="csvFile">Upload CSV File</label>
                 <input
                   type="file"
@@ -493,42 +519,8 @@ export default function GiveawayForm() {
                 </div>
               </div>
 
-          <div className={styles['giveaway-form__field']}>
-            <div className={styles['giveaway-form__checkbox']}>
-              <input
-                type="checkbox"
-                id="showManualEntries"
-                checked={showManualEntries}
-                onChange={(e) => {
-                  setShowManualEntries(e.target.checked);
-                  if (!e.target.checked) {
-                    setManualEntriesText('');
-                  }
-                }}
-              />
-              <label htmlFor="showManualEntries">Add bonus entries</label>
-            </div>
-            {showManualEntries && (
-              <>
-                <label htmlFor="manualEntries" style={{ marginTop: 'var(--spacing-md)' }}>Bonus Entries (one username per line)</label>
-                <textarea
-                  id="manualEntries"
-                  placeholder="username1&#10;username2&#10;username3"
-                  value={manualEntriesText}
-                  onChange={(e) => setManualEntriesText(e.target.value)}
-                  autoComplete="off"
-                  data-1p-ignore
-                  data-lpignore="true"
-                  data-form-type="other"
-                />
-                <div className={styles['giveaway-form__help-text']}>
-                  Add extra entries for specific users (e.g., social media shares, referrals, or other promotional activities). Each username entered gives one additional entry in the giveaway.
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className={styles['giveaway-form__field']}>
+          {/* Number of Winners */}
+          <div className={styles['giveaway-form__field']} style={{ marginTop: 'var(--spacing-xl)' }}>
             <label htmlFor="numberOfWinners">Number of Winners</label>
             <input
               type="number"
@@ -551,7 +543,8 @@ export default function GiveawayForm() {
             />
           </div>
 
-          <div className={styles['giveaway-form__checkbox-group']}>
+          {/* Entry Rules Section */}
+          <div className={styles['giveaway-form__checkbox-group']} style={{ marginTop: 'var(--spacing-xl)' }}>
             <div className={styles['giveaway-form__field']}>
               <label>Entry Counting Method</label>
               <div className={styles['giveaway-form__help-text']} style={{ marginBottom: 'var(--spacing-md)' }}>
@@ -568,7 +561,7 @@ export default function GiveawayForm() {
                   checked={criteria.requireTag}
                   onChange={() => setCriteria({ ...criteria, requireTag: true, uniqueEntriesOnly: false })}
                 />
-                <label htmlFor="countByTags">Count by tags: Each @mention = 1 entry (e.g., tagging 3 friends = 3 entries)</label>
+                <label htmlFor="countByTags">Count by tags: Each unique @mention = 1 entry</label>
               </div>
               <div className={styles['giveaway-form__radio']}>
                 <input
@@ -582,11 +575,93 @@ export default function GiveawayForm() {
               </div>
             </div>
 
-            <div style={{ marginTop: 'var(--spacing-lg)', marginBottom: 'var(--spacing-sm)', fontWeight: 500 }}>
-              Entry Limits Per User
+            {/* Additional Configuration */}
+            <div className={styles['giveaway-form__field']} style={{ marginTop: 'var(--spacing-xl)' }}>
+              <label>Additional Configuration</label>
+              <div className={styles['giveaway-form__help-text']} style={{ marginBottom: 'var(--spacing-md)' }}>
+                Optional settings to customize entry requirements
+              </div>
             </div>
 
-            <div className={styles['giveaway-form__field']}>
+            {/* Minimum Requirement Checkbox */}
+            <div className={styles['giveaway-form__field']} style={{ marginTop: '0' }}>
+              <div className={styles['giveaway-form__checkbox']}>
+                <input
+                  type="checkbox"
+                  id="showMinRequirement"
+                  checked={showMinRequirement}
+                  onChange={(e) => {
+                    setShowMinRequirement(e.target.checked);
+                    if (!e.target.checked) {
+                      setMinTagsInput('1');
+                      setMinCommentsInput('1');
+                      setCriteria({ ...criteria, minTagsRequired: 1, minCommentsRequired: 1 });
+                    }
+                  }}
+                />
+                <label htmlFor="showMinRequirement">Require minimum {criteria.requireTag ? 'tags' : 'comments'} to qualify</label>
+              </div>
+              {showMinRequirement && (
+                <>
+                  {criteria.requireTag ? (
+                    <>
+                      <label htmlFor="minTags" style={{ marginTop: 'var(--spacing-md)' }}>Minimum unique tags required</label>
+                      <input
+                        type="number"
+                        id="minTags"
+                        min="1"
+                        value={minTagsInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setMinTagsInput(val);
+                          if (val !== '' && parseInt(val) >= 1) {
+                            setCriteria({ ...criteria, minTagsRequired: parseInt(val) });
+                          }
+                        }}
+                        onBlur={() => {
+                          if (minTagsInput === '' || parseInt(minTagsInput) < 1) {
+                            setMinTagsInput('1');
+                            setCriteria({ ...criteria, minTagsRequired: 1 });
+                          }
+                        }}
+                      />
+                      <div className={styles['giveaway-form__help-text']}>
+                        Users must tag at least this many unique people to qualify (e.g., &quot;3&quot; means tag 3 friends minimum)
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <label htmlFor="minComments" style={{ marginTop: 'var(--spacing-md)' }}>Minimum comments required</label>
+                      <input
+                        type="number"
+                        id="minComments"
+                        min="1"
+                        value={minCommentsInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setMinCommentsInput(val);
+                          if (val !== '' && parseInt(val) >= 1) {
+                            setCriteria({ ...criteria, minCommentsRequired: parseInt(val) });
+                          }
+                        }}
+                        onBlur={() => {
+                          if (minCommentsInput === '' || parseInt(minCommentsInput) < 1) {
+                            setMinCommentsInput('1');
+                            setCriteria({ ...criteria, minCommentsRequired: 1 });
+                          }
+                        }}
+                      />
+                      <div className={styles['giveaway-form__help-text']}>
+                        Users must leave at least this many comments to qualify (e.g., &quot;2&quot; means must comment twice)
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Maximum Entries Checkbox */}
+            <div className={styles['giveaway-form__field']} style={{ marginTop: 'var(--spacing-md)' }}>
               <div className={styles['giveaway-form__checkbox']}>
                 <input
                   type="checkbox"
@@ -636,8 +711,45 @@ export default function GiveawayForm() {
                 </>
               )}
             </div>
+
+            {/* Bonus Entries Checkbox */}
+            <div className={styles['giveaway-form__field']} style={{ marginTop: 'var(--spacing-md)' }}>
+              <div className={styles['giveaway-form__checkbox']}>
+                <input
+                  type="checkbox"
+                  id="showManualEntries"
+                  checked={showManualEntries}
+                  onChange={(e) => {
+                    setShowManualEntries(e.target.checked);
+                    if (!e.target.checked) {
+                      setManualEntriesText('');
+                    }
+                  }}
+                />
+                <label htmlFor="showManualEntries">Add bonus entries</label>
+              </div>
+              {showManualEntries && (
+                <>
+                  <label htmlFor="manualEntries" style={{ marginTop: 'var(--spacing-md)' }}>Bonus Entries (one username per line)</label>
+                  <textarea
+                    id="manualEntries"
+                    placeholder="username1&#10;username2&#10;username3"
+                    value={manualEntriesText}
+                    onChange={(e) => setManualEntriesText(e.target.value)}
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
+                  <div className={styles['giveaway-form__help-text']}>
+                    Add extra entries for specific users (e.g., social media shares, referrals, or other promotional activities). Each username entered gives one additional entry in the giveaway.
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
+          {/* Error and Progress Messages */}
           {error && (
             <div style={{ 
               color: error.startsWith('success:') ? 'var(--color-success)' : 'var(--color-error)', 
@@ -660,10 +772,12 @@ export default function GiveawayForm() {
             </div>
           )}
 
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
             className={`${styles['giveaway-form__button']} ${styles['giveaway-form__button--primary']}`}
+            style={{ marginTop: 'var(--spacing-xl)' }}
           >
             {loading ? 'Processing...' : 'Pick Winners'}
           </button>

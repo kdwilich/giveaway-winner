@@ -4,7 +4,7 @@ export function processEntries(
   comments: InstagramComment[],
   criteria: GiveawayCriteria
 ): GiveawayEntry[] {
-  const entries: GiveawayEntry[] = [];
+  let entries: GiveawayEntry[] = [];
   
   // Add manual entries
   criteria.manualEntries.forEach(username => {
@@ -68,16 +68,37 @@ export function processEntries(
   
   // When requireTag is true, create one entry per unique tag per user
   if (criteria.requireTag) {
+    const minTags = criteria.minTagsRequired || 1;
     userUniqueTags.forEach((tags, username) => {
-      const tagCommentMap = userTagComments.get(username)!;
-      tags.forEach(tag => {
-        entries.push({
-          username,
-          comment: tagCommentMap.get(tag) || `@${tag}`, // Use full comment or fallback to just tag
-          tags: [tag],
+      // Only process users who meet the minimum tag requirement
+      if (tags.size >= minTags) {
+        const tagCommentMap = userTagComments.get(username)!;
+        tags.forEach(tag => {
+          entries.push({
+            username,
+            comment: tagCommentMap.get(tag) || `@${tag}`, // Use full comment or fallback to just tag
+            tags: [tag],
+          });
         });
-      });
+      }
     });
+  } else {
+    // When counting by comments, enforce minimum comment requirement
+    const minComments = criteria.minCommentsRequired || 1;
+    if (minComments > 1) {
+      // Count comments per user
+      const userCommentCounts = new Map<string, number>();
+      entries.forEach(entry => {
+        const count = userCommentCounts.get(entry.username) || 0;
+        userCommentCounts.set(entry.username, count + 1);
+      });
+      
+      // Filter out users who don't meet minimum
+      entries = entries.filter(entry => {
+        const count = userCommentCounts.get(entry.username) || 0;
+        return count >= minComments;
+      });
+    }
   }
   
   return entries;

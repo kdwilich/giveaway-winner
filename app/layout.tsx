@@ -2,27 +2,27 @@ import type { Metadata } from "next";
 import "./styles/globals.scss";
 
 export const metadata: Metadata = {
-  title: "Instagram Giveaway Picker - Fair & Random Winner Selection",
+  title: "Lucky Pick - Free Instagram Giveaway Picker",
   description: "Free Instagram giveaway picker tool. Select random winners fairly from Instagram comments. Count entries by tags or comments, set entry limits, and export results. No data stored.",
-  keywords: ["instagram giveaway", "giveaway picker", "random winner picker", "instagram contest", "winner selector", "giveaway tool", "instagram giveaway winner", "comment picker"],
-  authors: [{ name: "Giveaway Picker" }],
-  creator: "Giveaway Picker",
-  publisher: "Giveaway Picker",
+  keywords: ["instagram giveaway", "giveaway picker", "random winner picker", "instagram contest", "winner selector", "giveaway tool", "instagram giveaway winner", "comment picker", "lucky pick"],
+  authors: [{ name: "Lucky Pick" }],
+  creator: "Lucky Pick",
+  publisher: "Lucky Pick",
   metadataBase: new URL(process.env.NEXT_PUBLIC_URL || 'https://giveaway-picker.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: "Instagram Giveaway Picker - Fair & Random Winner Selection",
+    title: "Lucky Pick - Free Instagram Giveaway Picker",
     description: "Free Instagram giveaway picker tool. Select random winners fairly from Instagram comments. Perfect for influencers, brands, and content creators.",
     url: '/',
-    siteName: 'Instagram Giveaway Picker',
+    siteName: 'Lucky Pick',
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary',
-    title: "Instagram Giveaway Picker - Fair & Random Winner Selection",
+    title: "Lucky Pick - Free Instagram Giveaway Picker",
     description: "Free Instagram giveaway picker tool. Select random winners fairly from Instagram comments.",
     creator: '@giveawaypicker',
   },

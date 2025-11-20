@@ -1,6 +1,6 @@
 {
-  "name": "Instagram Giveaway Picker",
-  "short_name": "Giveaway Picker",
+  "name": "Lucky Pick - Free Instagram Giveaway Picker",
+  "short_name": "Lucky Pick",
   "description": "Fair and random winner selection for Instagram giveaways",
   "start_url": "/",
   "display": "standalone",

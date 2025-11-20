@@ -7,11 +7,20 @@
     padding: var(--spacing-xl);
     margin-bottom: var(--spacing-lg);
     animation: slideIn 0.3s ease-out;
+
+    @media (max-width: 640px) {
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-sm);
+    }
   }
 
   &__header {
     text-align: center;
     margin-bottom: var(--spacing-xl);
+
+    @media (max-width: 640px) {
+      margin-bottom: var(--spacing-md);
+    }
     
     h2 {
       font-size: 1.75rem;
@@ -31,6 +40,12 @@
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: var(--spacing-md);
     margin-bottom: var(--spacing-xl);
+
+    @media (max-width: 640px) {
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
   }
 
   &__stat {
@@ -39,6 +54,10 @@
     border-radius: var(--radius-lg);
     padding: var(--spacing-lg);
     text-align: center;
+
+    @media (max-width: 640px) {
+      padding: var(--spacing-sm);
+    }
     
     &-value {
       font-size: 2rem;
@@ -59,6 +78,10 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
+
+    @media (max-width: 640px) {
+      gap: var(--spacing-sm);
+    }
   }
 
   &__theme-selector {
@@ -164,6 +187,10 @@
     border-radius: var(--radius-lg);
     padding: var(--spacing-lg);
     animation: fadeInUp 0.4s ease-out backwards;
+
+    @media (max-width: 640px) {
+      padding: var(--spacing-sm);
+    }
     
     @for $i from 1 through 10 {
       &:nth-child(#{$i}) {
@@ -181,6 +208,10 @@
       display: flex;
       align-items: center;
       gap: var(--spacing-md);
+
+      @media (max-width: 640px) {
+        gap: var(--spacing-sm);
+      }
     }
     
     &-rank {
@@ -195,19 +226,33 @@
       font-weight: 600;
       font-size: 1.25rem;
       flex-shrink: 0;
+
+      @media (max-width: 640px) {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+      }
     }
     
     &-details {
+      flex: 1;
+      min-width: 0; // Allow text truncation
+      
       h3 {
         font-size: 1.125rem;
         font-weight: 600;
         color: var(--color-text-primary);
         margin-bottom: var(--spacing-xs);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       
       p {
         font-size: 0.875rem;
         color: var(--color-text-secondary);
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
     }
     
@@ -215,6 +260,11 @@
       display: flex;
       align-items: center;
       gap: var(--spacing-md);
+      flex-shrink: 0;
+
+      @media (max-width: 640px) {
+        gap: var(--spacing-sm);
+      }
     }
     
     &-badge {
@@ -224,6 +274,10 @@
       color: white;
       font-size: 0.875rem;
       font-weight: 500;
+
+      @media (max-width: 640px) {
+        display: none;
+      }
     }
   }
   
@@ -239,10 +293,21 @@
     color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
+    flex-shrink: 0;
     
     &:hover {
       background: var(--color-primary);
       color: white;
+    }
+
+    @media (max-width: 640px) {
+      width: 44px;
+      height: 44px;
+      
+      svg {
+        width: 24px;
+        height: 24px;
+      }
     }
   }
   

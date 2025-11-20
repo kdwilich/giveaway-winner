@@ -11,6 +11,8 @@ export interface GiveawayCriteria {
   uniqueEntriesOnly: boolean;
   maxEntriesPerUser: number;
   requireTag: boolean;
+  minTagsRequired: number; // Minimum tags needed to count as an entry (when requireTag is true)
+  minCommentsRequired: number; // Minimum comments needed to qualify (when requireTag is false)
   manualEntries: string[];
 }
 
