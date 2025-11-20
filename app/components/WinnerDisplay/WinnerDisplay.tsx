@@ -48,10 +48,20 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
   
   const openShareView = () => {
     setShowShareView(true);
+    // Set theme-color meta tag to black for mobile status bar
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', '#000000');
+    }
   };
   
   const closeShareView = () => {
     setShowShareView(false);
+    // Reset theme-color meta tag to original color
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', '#a88bfb');
+    }
   };
   
   // Calculate statistics

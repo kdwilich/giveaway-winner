@@ -88,25 +88,10 @@ export default function GiveawayForm() {
   };
 
   // Calculate relative luminance and determine if we need dark or light text
-  const getContrastColor = (hex: string): string => {
-    // Convert hex to RGB
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-    
-    // Calculate relative luminance using sRGB
-    const toLinear = (c: number) => {
-      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    };
-    
-    const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-    
-    // Calculate contrast ratios with white and black
-    const contrastWithWhite = (1.0 + 0.05) / (luminance + 0.05);
-    const contrastWithBlack = (luminance + 0.05) / (0.0 + 0.05);
-    
-    // Return whichever has better contrast
-    return contrastWithBlack > contrastWithWhite ? '#1a1a1a' : '#ffffff';
+  const getContrastColor = (): string => {
+    // Always return white for button text to ensure good contrast
+    // Most theme colors are vibrant and work better with white text
+    return '#ffffff';
   };
 
   // Convert hex to OKLCH and generate accent color
@@ -167,7 +152,7 @@ export default function GiveawayForm() {
   const updateAppTheme = (gradient: string) => {
     const primaryColor = extractPrimaryColor(gradient);
     const accentColor = generateAccentColor(primaryColor);
-    const buttonTextColor = getContrastColor(primaryColor);
+    const buttonTextColor = getContrastColor();
     
     console.log('Setting button text color:', buttonTextColor, 'for primary color:', primaryColor);
     
@@ -521,19 +506,23 @@ export default function GiveawayForm() {
                   }
                 }}
               />
-              <label htmlFor="showManualEntries">Add manual entries</label>
+              <label htmlFor="showManualEntries">Add bonus entries</label>
             </div>
             {showManualEntries && (
               <>
-                <label htmlFor="manualEntries" style={{ marginTop: 'var(--spacing-md)' }}>Manual Entries (one username per line)</label>
+                <label htmlFor="manualEntries" style={{ marginTop: 'var(--spacing-md)' }}>Bonus Entries (one username per line)</label>
                 <textarea
                   id="manualEntries"
                   placeholder="username1&#10;username2&#10;username3"
                   value={manualEntriesText}
                   onChange={(e) => setManualEntriesText(e.target.value)}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
                 <div className={styles['giveaway-form__help-text']}>
-                  Add bonus entries or entries from other sources
+                  Add extra entries for specific users (e.g., social media shares, referrals, or other promotional activities). Each username entered gives one additional entry in the giveaway.
                 </div>
               </>
             )}
