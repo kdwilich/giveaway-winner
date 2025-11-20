@@ -41,6 +41,23 @@
     }
   }
 
+  &__title-container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+
+  &__logo {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+
+    @media (max-width: 640px) {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
   &__subtitle {
     font-size: 1rem;
     color: var(--text-secondary);
@@ -62,6 +79,7 @@
     transition: all 0.2s ease;
     flex-shrink: 0;
     position: relative;
+    color: var(--color-primary);
 
     svg {
       transition: transform 0.2s ease;
@@ -114,6 +132,7 @@
     flex-shrink: 0;
     text-decoration: none;
     position: relative;
+    color: var(--color-primary);
 
     &:hover {
       background: var(--color-surface-hover);

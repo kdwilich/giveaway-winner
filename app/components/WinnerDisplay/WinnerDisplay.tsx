@@ -3,6 +3,7 @@
 import { Winner } from '@/types/giveaway';
 import styles from './WinnerDisplay.module.scss';
 import { useState } from 'react';
+import Image from 'next/image';
 
 interface WinnerDisplayProps {
   winners: Winner[];
@@ -145,7 +146,7 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
                         <div key={entryIndex} className={styles['winner-display__entry']}>
                           {entry.comment ? (
                             <>
-                              <div className={styles['winner-display__entry-comment']}>"{entry.comment}"</div>
+                              <div className={styles['winner-display__entry-comment']}>&ldquo;{entry.comment}&rdquo;</div>
                               {entry.tags && entry.tags.length > 0 && (
                                 <div className={styles['winner-display__entry-tags']}>
                                   Tag: @{entry.tags[0]}
@@ -244,6 +245,11 @@ export default function WinnerDisplay({ winners, totalEntries, uniqueUsers, shar
 
               <div className={styles['share-view__footer']}>
                 Congratulations! 🎊
+              </div>
+
+              <div className={styles['share-view__watermark']}>
+                <Image src="/luckypick.png" alt="Lucky Pick" width={40} height={40} className={styles['share-view__watermark-icon']} />
+                <span>LuckyPick.win</span>
               </div>
             </div>
           </div>

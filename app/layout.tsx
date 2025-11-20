@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   authors: [{ name: "Lucky Pick" }],
   creator: "Lucky Pick",
   publisher: "Lucky Pick",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_URL || 'https://giveaway-picker.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_URL || 'https://luckypick.win'),
   alternates: {
     canonical: '/',
   },

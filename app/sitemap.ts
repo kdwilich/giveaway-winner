@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://giveaway-picker.com';
+  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://luckypick.win';
 
   return [
     {
